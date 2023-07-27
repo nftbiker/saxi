@@ -593,7 +593,7 @@ function PlanStatistics({plan}: {plan: Plan}) {
 
 function TimeLeft({plan, progress, currentMotionStartedTime, paused}: {
   plan: Plan;
-  progress: number | null; 
+  progress: number | null;
   currentMotionStartedTime: Date | null;
   paused: boolean;
 }) {
@@ -789,6 +789,8 @@ function LayerSelector({state}: {state: State}) {
   </div>;
 }
 
+var autoPauseId: any = null;
+
 function PlotButtons(
   {state, plan, isPlanning, driver}: {
     state: State;
@@ -798,15 +800,27 @@ function PlotButtons(
   }
 ) {
   function cancel() {
+    if (autoPauseId) {
+      clearTimeout(autoPauseId)
+      autoPauseId = null
+    }
     driver.cancel();
   }
   function pause() {
+    if (autoPauseId) {
+      clearTimeout(autoPauseId)
+      autoPauseId = null
+    }
     driver.pause();
   }
   function resume() {
     if (state.planOptions.pauseAfter && state.planOptions.pauseAfter>0) {
-      setTimeout(() => {
-        console.log('Plot paused again after ', state.planOptions.pauseAfter, ' seconds');
+      if (autoPauseId) {
+        clearTimeout(autoPauseId)
+        autoPauseId = null
+      }
+      autoPauseId = setTimeout(() => {
+        console.log('Plot paused again after ', state.planOptions.pauseAfter, ' seconds - ', autoPauseId);
         driver.pause();
       }, state.planOptions.pauseAfter * 1000);
     }
@@ -814,8 +828,12 @@ function PlotButtons(
   }
   function plot(plan: Plan) {
     if (state.planOptions.pauseAfter && state.planOptions.pauseAfter>0) {
-      setTimeout(() => {
-        console.log('Plot paused after ', state.planOptions.pauseAfter, ' seconds');
+      if (autoPauseId) {
+        clearTimeout(autoPauseId)
+        autoPauseId = null
+      }
+      autoPauseId = setTimeout(() => {
+        console.log('Plot paused after ', state.planOptions.pauseAfter, ' seconds - ', autoPauseId);
         driver.pause();
       }, state.planOptions.pauseAfter * 1000);
     }
@@ -1193,9 +1211,9 @@ function Root() {
           <div className="section-header">plot</div>
           <div className="section-body section-body__plot">
             <PlanStatistics plan={plan} />
-            <TimeLeft 
-              plan={plan} 
-              progress={state.progress} 
+            <TimeLeft
+              plan={plan}
+              progress={state.progress}
               currentMotionStartedTime={currentMotionStartedTime}
               paused={state.paused}
             />
