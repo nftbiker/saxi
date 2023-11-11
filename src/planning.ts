@@ -89,7 +89,7 @@ interface ToolingProfile {
 
 export const Device = {
   Axidraw: {
-    stepsPerMm: 5,
+    stepsPerMm: 5 * 1.25, // for iDraw 1.0
 
     // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
     // Units: 83ns resolution pwm output.
@@ -292,9 +292,9 @@ export class Plan {
         // pen-up/pen-down heights in a single place and reference them from
         // the PenMotions. Then we can change them in just one place.
         if (j === this.motions.length - 3) {
-          return new PenMotion(penDownHeight, Device.Axidraw.penPctToPos(0), motion.duration());
+          return new PenMotion(penDownHeight, Device.Axidraw.penPctToPos(90), motion.duration());
         } else if (j === this.motions.length - 1) {
-          return new PenMotion(Device.Axidraw.penPctToPos(0), penUpHeight, motion.duration());
+          return new PenMotion(Device.Axidraw.penPctToPos(90), penUpHeight, motion.duration());
         }
         return (penMotionIndex++ % 2 === 0
           ? new PenMotion(penUpHeight, penDownHeight, motion.duration())
@@ -563,17 +563,19 @@ export function plan(
 ): Plan {
   const motions: Motion[] = [];
   let curPos = { x: 0, y: 0 };
-  const penMaxUpPos = profile.penUpPos < profile.penDownPos ? 100 : 0
+  // const penMaxUpPos = profile.penUpPos < profile.penDownPos ? 100 : 0
+  const penMaxUpPos = 90
+
   // for each path: move to the initial point, put the pen down, draw the path,
   // then pick the pen up.
-  paths.forEach((p, i) => {
+  paths.forEach((p) => {
     const m = constantAccelerationPlan(p, profile.penDownProfile);
-    const penUpPos = i === paths.length - 1 ? Device.Axidraw.penPctToPos(penMaxUpPos) : profile.penUpPos;
+    //const penUpPos = i === paths.length - 1 ? Device.Axidraw.penPctToPos(penMaxUpPos) : profile.penUpPos;
     motions.push(
       constantAccelerationPlan([curPos, m.p1], profile.penUpProfile),
       new PenMotion(profile.penUpPos, profile.penDownPos, profile.penDropDuration),
       m,
-      new PenMotion(profile.penDownPos, penUpPos, profile.penLiftDuration)
+      new PenMotion(profile.penDownPos, profile.penUpPos, profile.penLiftDuration)
     );
     curPos = m.p2;
   });

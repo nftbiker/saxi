@@ -162,7 +162,7 @@ export function startServer(port: number, device: string | null = null, enableCo
       await ebb.executeMotion(motion);
     },
     async postCancel(): Promise<void> {
-      await ebb.setPenHeight(Device.Axidraw.penPctToPos(0), 1000);
+      await ebb.setPenHeight(Device.Axidraw.penPctToPos(90), 1000);
     },
     async postPlot(): Promise<void> {
       await ebb.waitUntilMotorsIdle();
@@ -201,7 +201,8 @@ export function startServer(port: number, device: string | null = null, enableCo
       broadcast({c: "progress", p: {motionIdx}});
       await plotter.executeMotion(motion, [motionIdx, plan.motions.length]);
       if (motion instanceof PenMotion) {
-        penIsUp = motion.initialPos < motion.finalPos;
+        // penIsUp = motion.initialPos < motion.finalPos;
+        penIsUp = motion.initialPos > motion.finalPos
       }
       if (unpaused && penIsUp) {
         await unpaused;
