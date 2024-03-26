@@ -593,7 +593,7 @@ function PlanStatistics({plan}: {plan: Plan}) {
 
 function TimeLeft({plan, progress, currentMotionStartedTime, paused}: {
   plan: Plan;
-  progress: number | null; 
+  progress: number | null;
   currentMotionStartedTime: Date | null;
   paused: boolean;
 }) {
@@ -789,6 +789,8 @@ function LayerSelector({state}: {state: State}) {
   </div>;
 }
 
+var autoPauseId: any = null;
+
 function PlotButtons(
   {state, plan, isPlanning, driver}: {
     state: State;
@@ -798,15 +800,43 @@ function PlotButtons(
   }
 ) {
   function cancel() {
+    if (autoPauseId) {
+      clearTimeout(autoPauseId)
+      autoPauseId = null
+    }
     driver.cancel();
   }
   function pause() {
+    if (autoPauseId) {
+      clearTimeout(autoPauseId)
+      autoPauseId = null
+    }
     driver.pause();
   }
   function resume() {
+    if (state.planOptions.pauseAfter && state.planOptions.pauseAfter>0) {
+      if (autoPauseId) {
+        clearTimeout(autoPauseId)
+        autoPauseId = null
+      }
+      autoPauseId = setTimeout(() => {
+        console.log('Plot paused again after ', state.planOptions.pauseAfter, ' seconds - ', autoPauseId);
+        driver.pause();
+      }, state.planOptions.pauseAfter * 1000);
+    }
     driver.resume();
   }
   function plot(plan: Plan) {
+    if (state.planOptions.pauseAfter && state.planOptions.pauseAfter>0) {
+      if (autoPauseId) {
+        clearTimeout(autoPauseId)
+        autoPauseId = null
+      }
+      autoPauseId = setTimeout(() => {
+        console.log('Plot paused after ', state.planOptions.pauseAfter, ' seconds - ', autoPauseId);
+        driver.pause();
+      }, state.planOptions.pauseAfter * 1000);
+    }
     driver.plot(plan);
   }
 
@@ -955,6 +985,16 @@ function PlanOptions({state}: {state: State}) {
           step="0.01"
           min="0"
           onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDownCorneringFactor: Number(e.target.value)}})}
+        />
+      </label>
+      <label>
+        Pause plot after X seconds
+        <input
+          type="number"
+          value={state.planOptions.pauseAfter}
+          step="60"
+          min="0"
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {pauseAfter: Number(e.target.value)}})}
         />
       </label>
       <div className="flex">
@@ -1171,9 +1211,9 @@ function Root() {
           <div className="section-header">plot</div>
           <div className="section-body section-body__plot">
             <PlanStatistics plan={plan} />
-            <TimeLeft 
-              plan={plan} 
-              progress={state.progress} 
+            <TimeLeft
+              plan={plan}
+              progress={state.progress}
               currentMotionStartedTime={currentMotionStartedTime}
               paused={state.paused}
             />
